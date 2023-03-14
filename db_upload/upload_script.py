@@ -17,9 +17,12 @@ def load_data() -> None:
             else:
                 raise Exception('Failed to insert groups.')
 
-            data = insert(Student).values([{'group_id': randint(1, 10), 'first_name': choice(first_names),
-                     'last_name': choice(last_names), 'middle_name': choice(middle_names)}
-                    for _ in range(200)])
+            data = insert(Student).values([{
+                'group_id': randint(1, 10),
+                'first_name': choice(first_names),
+                'last_name': choice(last_names),
+                'middle_name': choice(middle_names)
+            } for _ in range(200)])
             s.execute(data)
             s.commit()
 
@@ -30,8 +33,9 @@ def load_data() -> None:
             db_courses = s.query(Course).all()
             db_students = s.query(Student).all()
             for student in db_students:
-                student.courses.extend(list({db_courses[randint(0, len(db_courses) - 1)]
-                                                 for _ in range(randint(1, 6))}))
+                student.courses.extend(list({
+                    db_courses[randint(0, len(db_courses) - 1)] for _ in range(randint(1, 6))
+                }))
             s.commit()
         except Exception:
             s.rollback()

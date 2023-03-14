@@ -10,18 +10,18 @@ from source.api.schemas.base_schemas import (
     DefaultResponseScheme,
     ErrorResponseScheme,
 )
+from source.api.services.crud.courses.update import UpdateCourseService
 from source.api.services.utils import get_db
-from source.api.services.crud.courses_crud import CoursesService
+from source.api.services.crud.courses.create import EnrolUserCourseService, CreateCourseService
+from source.api.services.crud.courses.read import GetFilteredCoursesService, GetSpecificCourseService
+from source.api.services.crud.courses.delete import ExpelUserCoursesService, DeleteCourseService
 from source.api.schemas.courses_schemas import (
     CourseScheme,
     CourseCreateScheme,
     CourseUpdateScheme,
 )
 from source.api.schemas.students_schemas import StudentsIdsScheme
-from source.db.models import (
-    Course,
-    Student,
-)
+from source.db.models import Course
 
 courses_router = APIRouter(prefix='/api/courses', tags=['Courses'])
 
@@ -32,15 +32,11 @@ courses_router = APIRouter(prefix='/api/courses', tags=['Courses'])
     response_model=list[CourseScheme],
 )
 def get_all_courses(
-        count_students: int = None,
-        db: Session = Depends(get_db),
+    count_students: int = None,
+    db: Session = Depends(get_db),
 ) -> list[CourseScheme]:
-    return CoursesService(
-        db=db,
-        model=Course,
-    ).get_courses(
-        count_students=count_students,
-    )
+    service = GetFilteredCoursesService(db=db, model=Course, count_students=count_students)
+    return service()
 
 
 @courses_router.get(
@@ -49,15 +45,11 @@ def get_all_courses(
     response_model=CourseScheme,
 )
 def get_specific_course(
-        course_id: int,
-        db: Session = Depends(get_db),
+    course_id: int,
+    db: Session = Depends(get_db),
 ) -> CourseScheme:
-    return CoursesService(
-        db=db,
-        model=Course,
-    ).get_data_id(
-        data_id=course_id,
-    )
+    service = GetSpecificCourseService(db=db, model=Course, course_id=course_id)
+    return service()
 
 
 @courses_router.post(
@@ -66,16 +58,11 @@ def get_specific_course(
     response_model=CourseScheme,
 )
 def create_course(
-        scheme: CourseCreateScheme,
-        db: Session = Depends(get_db),
+    scheme: CourseCreateScheme,
+    db: Session = Depends(get_db),
 ) -> CourseScheme:
-    return CoursesService(
-        db=db,
-        model=Course,
-    ).create(
-        scheme=scheme,
-        return_values=['id', 'name', 'description'],
-    )
+    service = CreateCourseService(db=db, model=Course, scheme=scheme, return_values=['id', 'name', 'description'])
+    return service()
 
 
 @courses_router.delete(
@@ -84,16 +71,11 @@ def create_course(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_course(
-        id_course: int,
-        db: Session = Depends(get_db),
+    id_course: int,
+    db: Session = Depends(get_db),
 ) -> None:
-    CoursesService(
-        db=db,
-        model=Course,
-    ).delete(
-        id_row=id_course,
-    )
-    return
+    service = DeleteCourseService(db=db, model=Course, id_course=id_course)
+    return service()
 
 
 @courses_router.put(
@@ -102,18 +84,19 @@ def delete_course(
     response_model=CourseScheme,
 )
 def update_course(
-        id_course: int,
-        scheme: CourseUpdateScheme,
-        db: Session = Depends(get_db),
+    id_course: int,
+    scheme: CourseUpdateScheme,
+    db: Session = Depends(get_db),
 ) -> None | CourseScheme:
-    return CoursesService(
+    service = UpdateCourseService(
         model=Course,
         db=db,
-    ).update(
         scheme=scheme,
         id_course=id_course,
-        return_values=['id', 'name', 'description'],
+        return_values=['id', 'name', 'description']
     )
+
+    return service()
 
 
 @courses_router.post(
@@ -123,18 +106,18 @@ def update_course(
     response_model=DefaultResponseScheme,
 )
 def enrolling_students_to_course(
-        id_course: int,
-        id_students: StudentsIdsScheme,
-        db: Session = Depends(get_db),
+    id_course: int,
+    id_students: StudentsIdsScheme,
+    db: Session = Depends(get_db),
 ) -> dict:
-    return CoursesService(
+
+    service = EnrolUserCourseService(
         db=db,
         model=Course,
-    ).enroll_students(
         id_students=id_students,
         id_course=id_course,
-        student_model=Student,
     )
+    return service()
 
 
 @courses_router.delete(
@@ -148,11 +131,10 @@ def expel_students_from_course(
         id_students: StudentsIdsScheme,
         db: Session = Depends(get_db),
 ) -> None:
-    return CoursesService(
+    service = ExpelUserCoursesService(
         db=db,
         model=Course,
-    ).expel_students(
         id_students=id_students,
         id_course=id_course,
-        student_model=Student,
     )
+    return service()

@@ -5,9 +5,14 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
-
+from source.api.services.crud.students.create import CreateStudentService
+from source.api.services.crud.students.delete import DeleteStudentService
+from source.api.services.crud.students.read import (
+    GetFilteredStudentsService,
+    GetSpecificStudentService
+)
+from source.api.services.crud.students.update import UpdateStudentService
 from source.api.services.utils import get_db
-from source.api.services.crud.students_crud import StudentService
 from source.api.schemas.students_schemas import (
     StudentScheme,
     StudentCreateScheme,
@@ -26,15 +31,11 @@ students_router = APIRouter(prefix='/api/students', tags=['Students'])
     response_model=list[StudentScheme],
 )
 def get_all_students(
-        filter_param: StudentFilters = Depends(StudentFilters),
-        db: Session = Depends(get_db),
+    filter_param: StudentFilters = Depends(StudentFilters),
+    db: Session = Depends(get_db),
 ) -> list[StudentScheme]:
-    return StudentService(
-        db=db,
-        model=Student,
-    ).get_students(
-        filter_param=filter_param,
-    )
+    service = GetFilteredStudentsService(db, Student, filter_param)
+    return service()
 
 
 @students_router.get(
@@ -43,15 +44,11 @@ def get_all_students(
     response_model=StudentScheme,
 )
 def get_specific_student(
-        student_id: int,
-        db: Session = Depends(get_db),
+    student_id: int,
+    db: Session = Depends(get_db),
 ) -> StudentScheme:
-    return StudentService(
-        db=db,
-        model=Student,
-    ).get_data_id(
-        data_id=student_id,
-    )
+    service = GetSpecificStudentService(db=db, model=Student, student_id=student_id)
+    return service()
 
 
 @students_router.post(
@@ -60,16 +57,16 @@ def get_specific_student(
     response_model=StudentScheme,
 )
 def create_student(
-        student: StudentCreateScheme,
-        db: Session = Depends(get_db),
+    student: StudentCreateScheme,
+    db: Session = Depends(get_db),
 ) -> StudentScheme:
-    return StudentService(
+    service = CreateStudentService(
         db=db,
         model=Student,
-    ).create(
         scheme=student,
-        return_values=['id', 'group_id', 'first_name', 'last_name', 'middle_name'],
+        return_values=['id', 'group_id', 'first_name', 'last_name', 'middle_name']
     )
+    return service()
 
 
 @students_router.delete(
@@ -78,16 +75,11 @@ def create_student(
     response_model=None,
 )
 def delete_student(
-        id_student: int,
-        db: Session = Depends(get_db),
+    id_student: int,
+    db: Session = Depends(get_db),
 ) -> None:
-    StudentService(
-        model=Student,
-        db=db,
-    ).delete(
-        id_row=id_student,
-    )
-    return
+    service = DeleteStudentService(db=db, model=Student, id_student=id_student)
+    return service()
 
 
 @students_router.put(
@@ -96,15 +88,15 @@ def delete_student(
     response_model=StudentScheme,
 )
 def update_student(
-        id_student: int,
-        scheme: StudentUpdateScheme,
-        db: Session = Depends(get_db),
+    id_student: int,
+    scheme: StudentUpdateScheme,
+    db: Session = Depends(get_db),
 ) -> None | StudentScheme:
-    return StudentService(
+    service = UpdateStudentService(
         model=Student,
         db=db,
-    ).update(
         scheme=scheme,
-        id_course=id_student,
-        return_values=['id', 'group_id', 'first_name', 'last_name', 'middle_name'],
+        id_student=id_student,
+        return_values=['id', 'group_id', 'first_name', 'last_name', 'middle_name']
     )
+    return service()
